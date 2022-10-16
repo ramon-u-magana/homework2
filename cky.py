@@ -3,11 +3,14 @@ COMS W4705 - Natural Language Processing - Summer 2022
 Homework 2 - Parsing with Probabilistic Context Free Grammars 
 Daniel Bauer
 """
+from curses import termname
 import math
+from symbol import term
 import sys
 from collections import defaultdict
 import itertools
 from grammar import Pcfg
+from pprint import pprint
 
 ### Use the following two functions to check the format of your data structures in part 3 ###
 def check_table_format(table):
@@ -97,7 +100,65 @@ class CkyParser(object):
         return False
         """
         # TODO, part 2
-        return False 
+        #return False 
+        # Grammar = (n, sig, r, s)
+        #   n = non terminals
+        #   sig = terminal symbols
+        #   r = production rules (n -> (n u sig))
+        #   s = start symbol (in n)
+
+        table = {}
+        n = len(tokens)
+
+        # initialize base cases
+        for i in range(n):
+            table[(i,i + 1)] = {}
+            # getting rules for each word 
+            terminal_rules = self.grammar.rhs_to_rules
+            #print(tokens[i])
+
+            #print(tokens[i])
+            #pprint(terminal_rules[(tokens[i],)])
+            #print(terminal_rules[('FROM',)])
+
+            # iterating through each rule to get possible terminal transitions
+            for rule in terminal_rules[(tokens[i],)]:
+                table[(i,i + 1)][rule[0]] = tokens[i]
+
+        # setting up main recursive loop
+        for length in range(2, n + 1):
+            # looping through starts
+            for i in range((n - length + 1)):
+                # setting ends
+                j = i + length
+
+                # creating idx dict
+                table[i,j] = {}
+                
+                # looping through splits
+                for k in range((i + 1), j):
+                    # loop through all possible permutations of BC
+                    for B in table[(i, k)]:
+                        for C in table[(k, j)]:
+                            # checking if valid combo 
+                            if (B,C) in terminal_rules.keys():
+                                print((B,C))
+                                rules_BC = terminal_rules[(B,C)]
+                                print(rules_BC)
+                                # add rule to table (includes backponiters [i think lol]) (or maybe all rules)
+                                # table[i,j][rules_BC[0][0]] = ((B,i,k), (C,k,j))
+                                for rule in rules_BC:
+                                    table[i,j][rule[0]] = ((B,i,k), (C,k,j))
+
+        #print(table)
+        pprint(table)
+
+        # checking if valid
+        if self.grammar.startsymbol in table[0, n]:
+            return True
+        else:
+            return False
+
        
     def parse_with_backpointers(self, tokens):
         """
@@ -123,7 +184,8 @@ if __name__ == "__main__":
         grammar = Pcfg(grammar_file) 
         parser = CkyParser(grammar)
         toks =['flights', 'from','miami', 'to', 'cleveland','.'] 
-        #print(parser.is_in_language(toks))
+        #parser.is_in_language(toks)
+        print(parser.is_in_language(toks))
         #table,probs = parser.parse_with_backpointers(toks)
         #assert check_table_format(chart)
         #assert check_probs_format(probs)
