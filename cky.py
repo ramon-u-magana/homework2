@@ -165,8 +165,73 @@ class CkyParser(object):
         Parse the input tokens and return a parse table and a probability table.
         """
         # TODO, part 3
-        table= None
-        probs = None
+        table= {}
+        probs = {}
+
+        n = len(tokens)
+
+        #copy paste from 2
+        # initialize base cases
+        for i in range(n):
+            table[(i,i + 1)] = {}
+            probs[(i,i + 1)] ={}
+            # getting rules for each word 
+            terminal_rules = self.grammar.rhs_to_rules
+
+            # iterating through each rule to get possible terminal transitions
+            # do an if in rules else prob 0#######
+            
+            for rule in terminal_rules[(tokens[i],)]:
+                print(rule)
+                print(math.log(rule[2]))
+                table[(i,i + 1)][rule[0]] = tokens[i]
+                probs[(i,i + 1)][rule[0]] = math.log(rule[2])
+
+
+        # setting up main recursive loop
+        for length in range(2, n + 1):
+            # looping through starts
+            for i in range((n - length + 1)):
+                # setting ends
+                j = i + length
+
+                # creating idx dict
+                table[i,j] = {}
+                probs[i,j] = {}
+                
+                # looping through splits
+                for k in range((i + 1), j):
+                    # loop through all possible permutations of BC
+                    for B in table[(i, k)]:
+                        for C in table[(k, j)]:
+                            # checking if valid combo 
+                            if (B,C) in terminal_rules.keys():
+                                #print((B,C))
+                                rules_BC = terminal_rules[(B,C)]
+                                #print(rules_BC)
+                                # add rule to table (includes backponiters [i think lol]) (or maybe all rules)
+                                # table[i,j][rules_BC[0][0]] = ((B,i,k), (C,k,j))
+
+
+                                ### should change this to account for single tuple of backpointers and adding to prob table
+                                for rule in rules_BC:
+                                    # checking if some backpointers not already in dict 
+                                    #if len(table[i,j][rule[0]]) == 0:
+                                    if rule[0] not in table[i,j]:
+                                        # add backpointers to table
+                                        table[i,j][rule[0]] = ((B,i,k), (C,k,j))
+                                        # add probability to table
+                                        probs[i,j][rule[0]] = math.log(rule[2])
+                                    elif math.log(rule[2]) > probs[i,j][rule[0]]:
+                                        # add backpointers to table
+                                        table[i,j][rule[0]] = ((B,i,k), (C,k,j))
+                                        # add probability to table
+                                        probs[i,j][rule[0]] = math.log(rule[2])
+
+        #print(table)
+        #pprint(table)
+        # probability is incorrect, as not adding and not initializing base probs
+
         return table, probs
 
 
@@ -175,7 +240,24 @@ def get_tree(chart, i,j,nt):
     Return the parse-tree rooted in non-terminal nt and covering span i,j.
     """
     # TODO: Part 4
-    return None 
+    # establish base case
+    if j == i + 1:
+        # getting most probable
+        '''most_prob = ""
+        for symbol in probs[(i,j)]:
+            if most_prob == "":
+                most_prob = symbol
+            elif probs[symbol] < probs[most_prob]:
+                most_prob = symbol'''
+        
+
+        return (nt, chart[(i,j)][nt])
+
+    else:
+        B = chart[(i,j)][nt][0]
+        C = chart[(i,j)][nt][1]
+        return (nt, (get_tree(chart, B[1], B[2], B[0])), (get_tree(chart, C[1], C[2], C[0])))
+    #return None 
  
        
 if __name__ == "__main__":
@@ -186,7 +268,12 @@ if __name__ == "__main__":
         toks =['flights', 'from','miami', 'to', 'cleveland','.'] 
         #parser.is_in_language(toks)
         print(parser.is_in_language(toks))
-        #table,probs = parser.parse_with_backpointers(toks)
-        #assert check_table_format(chart)
-        #assert check_probs_format(probs)
+        table,probs = parser.parse_with_backpointers(toks)
+
+        pprint(table)
+        #pprint(probs)
+        assert check_table_format(table)
+        assert check_probs_format(probs)
         
+        print(get_tree(table, 0, len(toks), grammar.startsymbol))
+        print(get_tree(table, 3, 5, 'PP'))
